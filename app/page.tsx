@@ -4,7 +4,7 @@ import { BlessingFloatLayer } from "@/components/BlessingEffects";
 import { HealthMessage, type StatsPayload } from "@/components/HealthMessage";
 import { Leaderboard, type LeaderRow } from "@/components/Leaderboard";
 import { WoodenFish } from "@/components/WoodenFish";
-import { randomUUID } from "@/lib/id";
+import { visitorIdFromDisplayNameAsync } from "@/lib/visitorId";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type BlessResponse = {
@@ -17,7 +17,6 @@ type BlessResponse = {
   hadCrit: boolean;
 };
 
-const VISITOR_KEY = "bless_visitor_id";
 const NAME_KEY = "bless_display_name";
 
 export default function HomePage() {
@@ -49,16 +48,26 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    let id = localStorage.getItem(VISITOR_KEY);
-    if (!id) {
-      id = randomUUID();
-      localStorage.setItem(VISITOR_KEY, id);
-    }
-    setVisitorId(id);
+    localStorage.removeItem("bless_visitor_id");
     const savedName = localStorage.getItem(NAME_KEY) ?? "";
     setNickname(savedName);
     if (savedName.trim().length > 0) setNicknameSaved(true);
   }, []);
+
+  useEffect(() => {
+    const name = nickname.trim();
+    if (name.length < 1) {
+      setVisitorId(null);
+      return;
+    }
+    let cancelled = false;
+    void visitorIdFromDisplayNameAsync(name).then((id) => {
+      if (!cancelled) setVisitorId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [nickname]);
 
   const refreshPublic = useCallback(async () => {
     const [s, lUrl] = await Promise.all([
@@ -195,10 +204,11 @@ export default function HomePage() {
           className="font-display text-3xl text-[#c75b8c] sm:text-4xl"
           style={{ textShadow: "0 2px 18px rgba(255, 182, 213, 0.45)" }}
         >
-          曼桢，愿你快快好起来
+          曼桢，愿你感冒快快好起来
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[color:var(--color-text-muted)]">
-          轻轻敲一敲木鱼，把祝福叠成软软的云。昵称只用来展示，统计会记在这台设备上。
+          轻轻敲一敲木鱼，为曼桢送一句祝福：少咳几声、多喝温水、早点康复。
+          同一昵称在任何设备上都会累计同一份祈福记录。
         </p>
       </header>
 
@@ -206,7 +216,7 @@ export default function HomePage() {
         <div className="flex flex-col gap-6">
           <div className="rounded-[2rem] border border-white/70 bg-white/55 p-6 shadow-[0_18px_50px_rgba(199,91,140,0.12)] backdrop-blur-md">
             <label className="block text-sm font-medium text-[color:var(--color-text-muted)]">
-              你的名字（无需密码）
+              你的名字（无需密码，同名即同一人）
             </label>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
@@ -240,7 +250,7 @@ export default function HomePage() {
             />
             <BlessingFloatLayer items={floating} reduceMotion={reduceMotion} />
             <p className="mt-6 max-w-sm text-center text-sm text-[color:var(--color-text-muted)]">
-              可以连续点击；有时会触发「暴击」，特效会更闪亮一点。
+              每敲一次，都是一句「感冒快快好起来」。连续点击可以；有时会触发「暴击」。
             </p>
           </div>
 
@@ -273,7 +283,7 @@ export default function HomePage() {
       </section>
 
       <footer className="mt-auto text-center text-xs text-[color:var(--color-text-muted)]">
-        私人祝福页 · 数据保存在服务器（本地 SQLite 文件或 Turso 远程库）
+        私人祝福页 · 按昵称累计祈福 · 愿曼桢感冒早日康复
       </footer>
     </main>
   );

@@ -7,7 +7,8 @@
     "build": "next build && node scripts/postbuild-standalone.mjs",
     "start": "next start",
     "start:server": "node .next/standalone/server.js",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:reset": "node scripts/reset-db.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { checkAndConsumeRate } from "@/lib/rateLimit";
+import { visitorIdFromDisplayName } from "@/lib/visitorId";
 import { isValidVisitorId } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -37,9 +38,6 @@ export async function POST(req: NextRequest) {
       ? Math.floor(b.amount)
       : 1;
 
-  if (!isValidVisitorId(visitorId)) {
-    return NextResponse.json({ error: "invalid_visitor" }, { status: 400 });
-  }
   if (displayName.length < 1 || displayName.length > 24) {
     return NextResponse.json({ error: "invalid_name" }, { status: 400 });
   }
@@ -47,11 +45,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_amount" }, { status: 400 });
   }
 
+  const canonicalId = visitorIdFromDisplayName(displayName);
+  if (visitorId && visitorId !== canonicalId && !isValidVisitorId(visitorId)) {
+    return NextResponse.json({ error: "invalid_visitor" }, { status: 400 });
+  }
+
   const db = await getDb();
   const ip = clientIp(req);
   const rate = await checkAndConsumeRate(
     db,
-    { visitorKey: `v:${visitorId}`, ipKey: `ip:${ip}` },
+    { visitorKey: `v:${canonicalId}`, ipKey: `ip:${ip}` },
     amount,
   );
   if (!rate.ok) {
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
   try {
     const existing = await tx.execute({
       sql: `SELECT total_bless, crit_bless FROM visitors WHERE id = ?`,
-      args: [visitorId],
+      args: [canonicalId],
     });
 
     let totalBless: number;
@@ -85,14 +88,14 @@ export async function POST(req: NextRequest) {
       await tx.execute({
         sql: `INSERT INTO visitors (id, display_name, total_bless, crit_bless, created_at, updated_at)
               VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [visitorId, displayName, amount, crits, now, now],
+        args: [canonicalId, displayName, amount, crits, now, now],
       });
       totalBless = amount;
       critBless = crits;
     } else {
       await tx.execute({
         sql: `UPDATE visitors SET display_name = ?, total_bless = total_bless + ?, crit_bless = crit_bless + ?, updated_at = ? WHERE id = ?`,
-        args: [displayName, amount, crits, now, visitorId],
+        args: [displayName, amount, crits, now, canonicalId],
       });
       totalBless =
         Number(existing.rows[0]?.total_bless ?? 0) + amount;

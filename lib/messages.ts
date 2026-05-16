@@ -8,27 +8,27 @@ const MILESTONE_THRESHOLDS: { id: string; min: number; label: string }[] = [
   {
     id: "first_warmth",
     min: 1,
-    label: "第一缕心念已抵达，像阳光落在被角上那样轻。",
+    label: "第一声祝福已送达——愿曼桢的感冒快快好起来。",
   },
   {
     id: "gentle_breeze",
     min: 50,
-    label: "风也变得温柔了，好像有人在替她掖好被角。",
+    label: "暖意渐渐围着她，鼻塞和咳嗽也会轻一些吧。",
   },
   {
     id: "soft_recovery",
     min: 200,
-    label: "祝福叠成软软的云，她的呼吸也会更平稳一点。",
+    label: "这么多心念叠在一起，愿她今晚睡得更安稳。",
   },
   {
     id: "bright_day",
     min: 1000,
-    label: "大家的心意汇成一片晴朗，她会一天比一天更有力气。",
+    label: "大家的心愿汇成晴天，愿她精神一点点回来。",
   },
   {
     id: "full_spring",
     min: 5000,
-    label: "春天好像提前来了——愿她早日回到元气满满的日子。",
+    label: "愿曼桢感冒痊愈，重新元气满满地奔跑。",
   },
 ];
 
@@ -42,16 +42,16 @@ export function milestonesForTotal(globalTotal: number): Milestone[] {
 
 export function primaryEncouragement(globalTotal: number): string {
   if (globalTotal <= 0) {
-    return "轻轻点一下木鱼，把你的祝福送给她吧。";
+    return "轻轻敲一敲木鱼，为曼桢送一句：感冒快快好起来。";
   }
   if (globalTotal < 20) {
-    return "每一份祝福都像温水，会让她更舒服一点点。";
+    return "每一份祝福都在说——愿曼桢少咳几声、多喝温水、早点康复。";
   }
   if (globalTotal < 100) {
-    return "有了你们的心念，她的世界更亮、更暖了一些。";
+    return "大家的心愿叠起来了，愿她的感冒症状一天比一天轻。";
   }
   if (globalTotal < 500) {
-    return "祝福在悄悄累积——她会感受到这份柔软的力量的。";
+    return "祝福越积越暖，愿曼桢早日退烧、恢复精神。";
   }
-  return "这么多温柔的心愿围着她，她一定会更快好起来。";
+  return "这么多心念围着她，愿曼桢感冒痊愈，重新活蹦乱跳。";
 }
