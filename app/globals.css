@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI",
+    "Microsoft YaHei", "Noto Sans SC", ui-rounded, system-ui, sans-serif;
+  --font-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI",
+    "Microsoft YaHei", "Noto Sans SC", ui-rounded, system-ui, sans-serif;
+  --color-cream: #fff8f4;
+  --color-blush: #ffe4ec;
+  --color-petal: #ffd6e8;
+  --color-sakura: #ffb7d5;
+  --color-mist: #e8f4ff;
+  --color-sky-soft: #c9e4ff;
+  --color-text: #5c4a5a;
+  --color-text-muted: #8a7a88;
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply min-h-dvh text-[color:var(--color-text)];
+    font-family: var(--font-body);
+    background:
+      radial-gradient(1200px 800px at 10% -10%, var(--color-blush), transparent 55%),
+      radial-gradient(900px 600px at 90% 0%, var(--color-mist), transparent 50%),
+      linear-gradient(180deg, var(--color-cream) 0%, #fff 40%, var(--color-cream) 100%);
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
