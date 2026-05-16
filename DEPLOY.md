@@ -168,7 +168,23 @@ npm run build
 
 **方式 B：本机打包上传**
 
-在 Windows 项目目录打包（排除 `node_modules`、`.next`），用 SFTP 传到服务器 `/var/www/blessing`，再在服务器执行 `npm ci && npm run build`。
+在 Windows 项目目录打包（**必须排除** `node_modules`、`.next`），用 SFTP 传到服务器 `/var/www/blessing`，再在服务器执行：
+
+```bash
+chmod +x deploy/install-on-server.sh
+./deploy/install-on-server.sh
+```
+
+> 若曾把 Windows 的 `node_modules` 传上服务器，即使后来 `git pull` 也不会自动删除，需手动 `rm -rf node_modules` 或运行上述脚本。
+
+**方式 C：Git pull 更新（推荐，与方式 A 相同）**
+
+```bash
+cd /var/www/blessing
+git pull
+./deploy/install-on-server.sh
+pm2 restart blessing
+```
 
 ### 7.4 环境变量与启动
 
