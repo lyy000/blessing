@@ -3,8 +3,13 @@
 import { BlessingFloatLayer } from "@/components/BlessingEffects";
 import { HealthMessage, type StatsPayload } from "@/components/HealthMessage";
 import { Leaderboard, type LeaderRow } from "@/components/Leaderboard";
+import { MilestoneBlessModal } from "@/components/MilestoneBlessModal";
 import { WoodenFish } from "@/components/WoodenFish";
-import { visitorIdFromDisplayNameAsync } from "@/lib/visitorId";
+import {
+  MILESTONE_EVERY,
+  pickRandomBlessingQuote,
+} from "@/lib/blessingQuotes";
+import { visitorIdFromDisplayName } from "@/lib/visitorId";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type BlessResponse = {
@@ -19,10 +24,19 @@ type BlessResponse = {
 
 const NAME_KEY = "bless_display_name";
 
+function apiErrorMessage(status: number, code?: string): string {
+  if (status === 429) return "慢一点哦，稍后再试～";
+  if (code === "invalid_name") return "昵称需要 1～24 个字～";
+  if (code === "rate_limited") return "点击太快了，歇一会儿～";
+  if (code === "server") return "服务器开小差了，稍后再试～";
+  return "祈福没发送成功，请稍后再试～";
+}
+
 export default function HomePage() {
   const [visitorId, setVisitorId] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [nicknameSaved, setNicknameSaved] = useState(false);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsPayload | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderRow[]>([]);
   const [selfTotal, setSelfTotal] = useState(0);
@@ -34,10 +48,18 @@ export default function HomePage() {
   >([]);
   const [rateLimited, setRateLimited] = useState<string | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [milestoneOpen, setMilestoneOpen] = useState(false);
+  const [milestoneQuote, setMilestoneQuote] = useState("");
+  const [milestoneLevel, setMilestoneLevel] = useState(100);
 
   const pending = useRef(0);
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const floatId = useRef(0);
+  const selfTotalRef = useRef(0);
+
+  useEffect(() => {
+    selfTotalRef.current = selfTotal;
+  }, [selfTotal]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -51,48 +73,63 @@ export default function HomePage() {
     localStorage.removeItem("bless_visitor_id");
     const savedName = localStorage.getItem(NAME_KEY) ?? "";
     setNickname(savedName);
-    if (savedName.trim().length > 0) setNicknameSaved(true);
+    if (savedName.trim().length > 0) {
+      setNicknameSaved(true);
+      setVisitorId(visitorIdFromDisplayName(savedName));
+    }
   }, []);
 
-  useEffect(() => {
-    const name = nickname.trim();
-    if (name.length < 1) {
+  const syncVisitorId = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (trimmed.length < 1) {
       setVisitorId(null);
-      return;
+      return null;
     }
-    let cancelled = false;
-    void visitorIdFromDisplayNameAsync(name).then((id) => {
-      if (!cancelled) setVisitorId(id);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [nickname]);
+    const id = visitorIdFromDisplayName(trimmed);
+    setVisitorId(id);
+    return id;
+  }, []);
 
-  const refreshPublic = useCallback(async () => {
-    const [s, lUrl] = await Promise.all([
-      fetch("/api/stats").then((r) => r.json() as Promise<StatsPayload>),
-      visitorId
-        ? fetch(`/api/leaderboard?limit=20&visitorId=${encodeURIComponent(visitorId)}`)
-        : fetch("/api/leaderboard?limit=20"),
-    ]);
-    const l = (await lUrl.json()) as {
-      leaderboard: LeaderRow[];
-      me: LeaderRow | null;
-      myRank: number | null;
-    };
-    setStats(s);
-    setLeaderboard(l.leaderboard);
-    if (l.me) {
-      setSelfTotal(l.me.totalBless);
-      setSelfCrit(l.me.critBless);
-      if (l.myRank != null) setRank(l.myRank);
-    } else {
-      setSelfTotal(0);
-      setSelfCrit(0);
-      setRank(null);
+  const maybeShowMilestone = useCallback((prevTotal: number, newTotal: number) => {
+    const prevLevel = Math.floor(prevTotal / MILESTONE_EVERY);
+    const newLevel = Math.floor(newTotal / MILESTONE_EVERY);
+    if (newLevel > prevLevel && newTotal >= MILESTONE_EVERY) {
+      setMilestoneLevel(newLevel * MILESTONE_EVERY);
+      setMilestoneQuote(pickRandomBlessingQuote());
+      setMilestoneOpen(true);
     }
-  }, [visitorId]);
+  }, []);
+
+  const refreshPublic = useCallback(
+    async (idOverride?: string | null) => {
+      const id = idOverride ?? visitorId;
+      const [s, lUrl] = await Promise.all([
+        fetch("/api/stats").then((r) => r.json() as Promise<StatsPayload>),
+        id
+          ? fetch(
+              `/api/leaderboard?limit=20&visitorId=${encodeURIComponent(id)}`,
+            )
+          : fetch("/api/leaderboard?limit=20"),
+      ]);
+      const l = (await lUrl.json()) as {
+        leaderboard: LeaderRow[];
+        me: LeaderRow | null;
+        myRank: number | null;
+      };
+      setStats(s);
+      setLeaderboard(l.leaderboard);
+      if (l.me) {
+        setSelfTotal(l.me.totalBless);
+        setSelfCrit(l.me.critBless);
+        if (l.myRank != null) setRank(l.myRank);
+      } else if (!id) {
+        setSelfTotal(0);
+        setSelfCrit(0);
+        setRank(null);
+      }
+    },
+    [visitorId],
+  );
 
   useEffect(() => {
     void refreshPublic();
@@ -108,22 +145,37 @@ export default function HomePage() {
     }, 900);
   };
 
+  const showToast = (msg: string, ms = 3200) => {
+    setRateLimited(msg);
+    setTimeout(() => setRateLimited(null), ms);
+  };
+
   const flushBless = useCallback(async () => {
     const n = pending.current;
-    if (n <= 0 || !visitorId) return;
+    if (n <= 0) return;
     pending.current = 0;
+
     const name = nickname.trim();
     if (name.length < 1) {
       pending.current += n;
+      showToast("请先输入并保存昵称～");
       return;
     }
+    if (!nicknameSaved) {
+      pending.current += n;
+      showToast("请先点击「保存昵称」～");
+      return;
+    }
+
+    const id = visitorIdFromDisplayName(name);
+    const prevTotal = selfTotalRef.current;
 
     try {
       const res = await fetch("/api/bless", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          visitorId,
+          visitorId: id,
           displayName: name,
           amount: n,
         }),
@@ -135,20 +187,21 @@ export default function HomePage() {
 
       if (res.status === 429 && data.retryAfterSec) {
         pending.current += n;
-        setRateLimited(`慢一点哦，${data.retryAfterSec} 秒后再试～`);
-        setTimeout(() => setRateLimited(null), 3200);
+        showToast(`慢一点哦，${data.retryAfterSec} 秒后再试～`);
         return;
       }
       if (!res.ok) {
         pending.current += n;
-        setRateLimited("网络开小差了，稍后再试～");
-        setTimeout(() => setRateLimited(null), 3200);
+        showToast(apiErrorMessage(res.status, data.error));
         return;
       }
 
       setSelfTotal(data.totalBless);
       setSelfCrit(data.critBless);
       setRank(data.rank);
+      selfTotalRef.current = data.totalBless;
+      maybeShowMilestone(prevTotal, data.totalBless);
+
       if (data.hadCrit) {
         setTapBurst("crit");
         pushFloat(
@@ -160,13 +213,18 @@ export default function HomePage() {
         pushFloat("normal", `+${n}`);
       }
       setTimeout(() => setTapBurst(null), reduceMotion ? 200 : 420);
-      void refreshPublic();
+      void refreshPublic(id);
     } catch {
       pending.current += n;
-      setRateLimited("发送失败，请检查网络～");
-      setTimeout(() => setRateLimited(null), 3200);
+      showToast("发送失败，请检查网络～");
     }
-  }, [nickname, refreshPublic, visitorId, reduceMotion]);
+  }, [
+    nickname,
+    nicknameSaved,
+    refreshPublic,
+    reduceMotion,
+    maybeShowMilestone,
+  ]);
 
   const scheduleFlush = useCallback(() => {
     if (flushTimer.current) return;
@@ -178,10 +236,13 @@ export default function HomePage() {
 
   const onTap = () => {
     const name = nickname.trim();
-    if (name.length < 1 || !visitorId) return;
+    if (name.length < 1) {
+      showToast("请先输入昵称～");
+      return;
+    }
     if (!nicknameSaved) {
-      localStorage.setItem(NAME_KEY, name);
-      setNicknameSaved(true);
+      showToast("请先点击「保存昵称」再敲木鱼～");
+      return;
     }
     pending.current = Math.min(pending.current + 1, 25);
     scheduleFlush();
@@ -189,13 +250,35 @@ export default function HomePage() {
 
   const saveNickname = () => {
     const name = nickname.trim();
-    if (name.length < 1 || name.length > 24) return;
+    if (name.length < 1) {
+      setSaveHint("昵称不能为空哦");
+      setTimeout(() => setSaveHint(null), 3000);
+      return;
+    }
+    if (name.length > 24) {
+      setSaveHint("昵称最多 24 个字");
+      setTimeout(() => setSaveHint(null), 3000);
+      return;
+    }
     localStorage.setItem(NAME_KEY, name);
     setNicknameSaved(true);
+    const id = syncVisitorId(name);
+    setSaveHint("已保存，可以敲木鱼祈福啦 ✓");
+    setTimeout(() => setSaveHint(null), 4000);
+    void refreshPublic(id);
   };
+
+  const canTap = nicknameSaved && nickname.trim().length > 0;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-8 px-4 py-10 pb-16 sm:px-8">
+      <MilestoneBlessModal
+        open={milestoneOpen}
+        quote={milestoneQuote}
+        milestone={milestoneLevel}
+        onClose={() => setMilestoneOpen(false)}
+      />
+
       <header className="text-center">
         <p className="mb-2 text-sm tracking-wide text-[color:var(--color-text-muted)]">
           给曼桢的一页小心愿
@@ -208,7 +291,6 @@ export default function HomePage() {
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[color:var(--color-text-muted)]">
           轻轻敲一敲木鱼，为曼桢送一句祝福：少咳几声、多喝温水、早点康复。
-          同一昵称在任何设备上都会累计同一份祈福记录。
         </p>
       </header>
 
@@ -216,7 +298,7 @@ export default function HomePage() {
         <div className="flex flex-col gap-6">
           <div className="rounded-[2rem] border border-white/70 bg-white/55 p-6 shadow-[0_18px_50px_rgba(199,91,140,0.12)] backdrop-blur-md">
             <label className="block text-sm font-medium text-[color:var(--color-text-muted)]">
-              你的名字（无需密码，同名即同一人）
+              你的名字（无需密码）
             </label>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
@@ -224,7 +306,10 @@ export default function HomePage() {
                 maxLength={24}
                 placeholder="例如：小桃"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
+                onChange={(e) => {
+                  setNickname(e.target.value);
+                  setNicknameSaved(false);
+                }}
               />
               <button
                 type="button"
@@ -234,23 +319,40 @@ export default function HomePage() {
                 保存昵称
               </button>
             </div>
+            {saveHint && (
+              <p
+                className={[
+                  "mt-3 text-sm",
+                  saveHint.includes("已保存")
+                    ? "font-medium text-[#5a9e6f]"
+                    : "text-[#a65c7a]",
+                ].join(" ")}
+                role="status"
+              >
+                {saveHint}
+              </p>
+            )}
           </div>
 
           <div className="relative flex flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-gradient-to-b from-white/75 to-[#fff5f9]/90 p-8 shadow-[0_22px_60px_rgba(180,120,160,0.15)] backdrop-blur-md">
             {rateLimited && (
-              <div className="absolute top-4 z-20 rounded-full bg-[#fff0f5] px-4 py-2 text-sm text-[#a65c7a] shadow">
+              <div
+                className="absolute top-4 z-20 max-w-[90%] rounded-full bg-[#fff0f5] px-4 py-2 text-center text-sm text-[#a65c7a] shadow"
+                role="alert"
+              >
                 {rateLimited}
               </div>
             )}
             <WoodenFish
-              disabled={nickname.trim().length < 1}
+              disabled={!canTap}
               burst={tapBurst}
               reduceMotion={reduceMotion}
               onTap={onTap}
             />
             <BlessingFloatLayer items={floating} reduceMotion={reduceMotion} />
             <p className="mt-6 max-w-sm text-center text-sm text-[color:var(--color-text-muted)]">
-              每敲一次，都是一句「感冒快快好起来」。连续点击可以；有时会触发「暴击」。
+              每敲一次，都是一句「感冒快快好起来」。连续点击可以；有时会触发「暴击」。累计满
+              100 次会弹出随机祝福。
             </p>
           </div>
 
@@ -259,9 +361,7 @@ export default function HomePage() {
 
         <aside className="flex flex-col gap-6">
           <div className="rounded-[2rem] border border-white/70 bg-white/55 p-6 shadow-[0_18px_50px_rgba(140,170,220,0.12)] backdrop-blur-md">
-            <h2 className="font-display text-xl text-[#6b8cae]">
-              我的心念
-            </h2>
+            <h2 className="font-display text-xl text-[#6b8cae]">我的心念</h2>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-2xl bg-[#fff8fb] p-4">
                 <dt className="text-[color:var(--color-text-muted)]">累计祈福</dt>
@@ -274,7 +374,19 @@ export default function HomePage() {
             </dl>
             {rank != null && (
               <p className="mt-4 text-sm text-[color:var(--color-text-muted)]">
-                当前排名约第 <span className="font-semibold text-[#c75b8c]">{rank}</span> 位
+                当前排名约第{" "}
+                <span className="font-semibold text-[#c75b8c]">{rank}</span> 位
+              </p>
+            )}
+            {selfTotal > 0 && (
+              <p className="mt-3 text-xs text-[color:var(--color-text-muted)]">
+                距下一次百次祝福弹窗还差{" "}
+                <span className="font-semibold text-[#c75b8c]">
+                  {selfTotal % MILESTONE_EVERY === 0
+                    ? MILESTONE_EVERY
+                    : MILESTONE_EVERY - (selfTotal % MILESTONE_EVERY)}
+                </span>{" "}
+                次
               </p>
             )}
           </div>
@@ -283,7 +395,7 @@ export default function HomePage() {
       </section>
 
       <footer className="mt-auto text-center text-xs text-[color:var(--color-text-muted)]">
-        私人祝福页 · 按昵称累计祈福 · 愿曼桢感冒早日康复
+        私人祝福页 · 愿曼桢感冒早日康复
       </footer>
     </main>
   );

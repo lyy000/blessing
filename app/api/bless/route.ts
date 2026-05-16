@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { checkAndConsumeRate } from "@/lib/rateLimit";
 import { visitorIdFromDisplayName } from "@/lib/visitorId";
-import { isValidVisitorId } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -30,7 +29,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
   const b = body as Record<string, unknown>;
-  const visitorId = typeof b.visitorId === "string" ? b.visitorId : "";
   const displayName =
     typeof b.displayName === "string" ? b.displayName.trim() : "";
   const amount =
@@ -46,9 +44,6 @@ export async function POST(req: NextRequest) {
   }
 
   const canonicalId = visitorIdFromDisplayName(displayName);
-  if (visitorId && visitorId !== canonicalId && !isValidVisitorId(visitorId)) {
-    return NextResponse.json({ error: "invalid_visitor" }, { status: 400 });
-  }
 
   const db = await getDb();
   const ip = clientIp(req);
