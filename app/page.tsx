@@ -10,6 +10,8 @@ import {
   pickRandomBlessingQuote,
 } from "@/lib/blessingQuotes";
 import { visitorIdFromDisplayName } from "@/lib/visitorId";
+import { playWoodenFishKnock } from "@/lib/woodenFishSound";
+import type { TapRipple } from "@/components/TapRippleLayer";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type BlessResponse = {
@@ -44,8 +46,10 @@ export default function HomePage() {
   const [rank, setRank] = useState<number | null>(null);
   const [tapBurst, setTapBurst] = useState<"normal" | "crit" | null>(null);
   const [floating, setFloating] = useState<
-    { id: number; kind: "normal" | "crit"; text: string }[]
+    { id: number; kind: "normal" | "crit"; text: string; offsetX?: number }[]
   >([]);
+  const [tapPulse, setTapPulse] = useState(0);
+  const [ripples, setRipples] = useState<TapRipple[]>([]);
   const [rateLimited, setRateLimited] = useState<string | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [milestoneOpen, setMilestoneOpen] = useState(false);
@@ -55,6 +59,7 @@ export default function HomePage() {
   const pending = useRef(0);
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const floatId = useRef(0);
+  const rippleId = useRef(0);
   const selfTotalRef = useRef(0);
 
   useEffect(() => {
@@ -90,15 +95,28 @@ export default function HomePage() {
     return id;
   }, []);
 
-  const maybeShowMilestone = useCallback((prevTotal: number, newTotal: number) => {
-    const prevLevel = Math.floor(prevTotal / MILESTONE_EVERY);
-    const newLevel = Math.floor(newTotal / MILESTONE_EVERY);
-    if (newLevel > prevLevel && newTotal >= MILESTONE_EVERY) {
-      setMilestoneLevel(newLevel * MILESTONE_EVERY);
-      setMilestoneQuote(pickRandomBlessingQuote());
-      setMilestoneOpen(true);
+  const openMilestone = useCallback((level: number, quote: string) => {
+    if (flushTimer.current) {
+      clearTimeout(flushTimer.current);
+      flushTimer.current = null;
     }
+    pending.current = 0;
+    setMilestoneLevel(level);
+    setMilestoneQuote(quote);
+    setMilestoneOpen(true);
+    playWoodenFishKnock("milestone");
   }, []);
+
+  const maybeShowMilestone = useCallback(
+    (prevTotal: number, newTotal: number) => {
+      const prevLevel = Math.floor(prevTotal / MILESTONE_EVERY);
+      const newLevel = Math.floor(newTotal / MILESTONE_EVERY);
+      if (newLevel > prevLevel && newTotal >= MILESTONE_EVERY) {
+        openMilestone(newLevel * MILESTONE_EVERY, pickRandomBlessingQuote());
+      }
+    },
+    [openMilestone],
+  );
 
   const refreshPublic = useCallback(
     async (idOverride?: string | null) => {
@@ -139,10 +157,25 @@ export default function HomePage() {
 
   const pushFloat = (kind: "normal" | "crit", text: string) => {
     const id = ++floatId.current;
-    setFloating((prev) => [...prev, { id, kind, text }]);
+    const offsetX = Math.round((Math.random() - 0.5) * 80);
+    setFloating((prev) => [...prev, { id, kind, text, offsetX }]);
     setTimeout(() => {
       setFloating((prev) => prev.filter((x) => x.id !== id));
-    }, 900);
+    }, 1000);
+  };
+
+  const addRipple = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const id = ++rippleId.current;
+    const ripple: TapRipple = {
+      id,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+    setRipples((prev) => [...prev, ripple]);
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((r) => r.id !== id));
+    }, 600);
   };
 
   const showToast = (msg: string, ms = 3200) => {
@@ -204,13 +237,16 @@ export default function HomePage() {
 
       if (data.hadCrit) {
         setTapBurst("crit");
+        playWoodenFishKnock("crit");
         pushFloat(
           "crit",
           data.critCount >= n ? "心念暴击！" : `暴击 ×${data.critCount}`,
         );
-      } else {
+      } else if (n > 1) {
         setTapBurst("normal");
         pushFloat("normal", `+${n}`);
+      } else {
+        setTapBurst("normal");
       }
       setTimeout(() => setTapBurst(null), reduceMotion ? 200 : 420);
       void refreshPublic(id);
@@ -234,7 +270,8 @@ export default function HomePage() {
     }, 90);
   }, [flushBless]);
 
-  const onTap = () => {
+  const onTap = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (milestoneOpen) return;
     const name = nickname.trim();
     if (name.length < 1) {
       showToast("请先输入昵称～");
@@ -244,6 +281,10 @@ export default function HomePage() {
       showToast("请先点击「保存昵称」再敲木鱼～");
       return;
     }
+    addRipple(e);
+    setTapPulse((p) => p + 1);
+    playWoodenFishKnock("normal");
+    pushFloat("normal", "咚 +1");
     pending.current = Math.min(pending.current + 1, 25);
     scheduleFlush();
   };
@@ -268,7 +309,8 @@ export default function HomePage() {
     void refreshPublic(id);
   };
 
-  const canTap = nicknameSaved && nickname.trim().length > 0;
+  const canTap =
+    nicknameSaved && nickname.trim().length > 0 && !milestoneOpen;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-8 px-4 py-10 pb-16 sm:px-8">
@@ -346,13 +388,14 @@ export default function HomePage() {
             <WoodenFish
               disabled={!canTap}
               burst={tapBurst}
+              tapPulse={tapPulse}
+              ripples={ripples}
               reduceMotion={reduceMotion}
               onTap={onTap}
             />
             <BlessingFloatLayer items={floating} reduceMotion={reduceMotion} />
             <p className="mt-6 max-w-sm text-center text-sm text-[color:var(--color-text-muted)]">
-              每敲一次，都是一句「感冒快快好起来」。连续点击可以；有时会触发「暴击」。累计满
-              100 次会弹出随机祝福。
+              每敲一次都有音效与飘字反馈；连点可攒祝福。累计每满 100 次会暂停并弹出随机祝福语。
             </p>
           </div>
 
