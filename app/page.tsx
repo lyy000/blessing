@@ -49,6 +49,7 @@ export default function HomePage() {
     { id: number; kind: "normal" | "crit"; text: string; offsetX?: number }[]
   >([]);
   const [tapPulse, setTapPulse] = useState(0);
+  const [critPulse, setCritPulse] = useState(0);
   const [ripples, setRipples] = useState<TapRipple[]>([]);
   const [rateLimited, setRateLimited] = useState<string | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -236,13 +237,14 @@ export default function HomePage() {
       maybeShowMilestone(prevTotal, data.totalBless);
 
       if (data.hadCrit) {
+        setCritPulse((p) => p + 1);
         setTapBurst("crit");
         playWoodenFishKnock("crit");
         pushFloat(
           "crit",
-          data.critCount >= n ? "心念暴击！" : `暴击 ×${data.critCount}`,
+          data.critCount >= n ? "✦ 心念暴击 ✦" : `✦ 暴击 ×${data.critCount}`,
         );
-        setTimeout(() => setTapBurst(null), reduceMotion ? 200 : 580);
+        setTimeout(() => setTapBurst(null), reduceMotion ? 200 : 760);
       } else if (n > 1) {
         pushFloat("normal", `+${n}`);
       }
@@ -386,6 +388,7 @@ export default function HomePage() {
               disabled={!canTap}
               burst={tapBurst}
               tapPulse={tapPulse}
+              critPulse={critPulse}
               ripples={ripples}
               reduceMotion={reduceMotion}
               onTap={onTap}

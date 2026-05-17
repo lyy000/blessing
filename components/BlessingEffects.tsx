@@ -23,7 +23,7 @@ export function BlessingFloatLayer({
             reduceMotion
               ? "float-soft absolute left-1/2 top-1/3 text-base font-semibold text-[#c75b8c]"
               : f.kind === "crit"
-                ? "float-crit absolute top-1/3 text-lg font-bold text-[#ff6b9d]"
+                ? "float-crit absolute top-[28%] text-xl font-bold tracking-wide text-[#ff4d8a] drop-shadow-[0_0_12px_rgba(255,158,196,0.8)]"
                 : "float-normal absolute top-1/3 text-base font-semibold text-[#c75b8c]"
           }
           style={{
@@ -47,23 +47,26 @@ export function BlessingFloatLayer({
         }
         @keyframes floatCrit {
           0% {
-            opacity: 1;
-            transform: translate(-50%, 0) scale(1) rotate(-6deg);
-            filter: drop-shadow(0 0 12px #ffb7d5);
+            opacity: 0;
+            transform: translate(-50%, 8px) scale(0.6);
           }
-          40% {
-            transform: translate(-50%, -16px) scale(1.35) rotate(6deg);
+          12% {
+            opacity: 1;
+            transform: translate(-50%, 0) scale(1.15);
+          }
+          35% {
+            transform: translate(-50%, -20px) scale(1.45);
           }
           100% {
             opacity: 0;
-            transform: translate(-50%, -80px) scale(1.4) rotate(0deg);
+            transform: translate(-50%, -88px) scale(1.35);
           }
         }
         .float-normal {
           animation: floatUp 0.9s ease-out forwards;
         }
         .float-crit {
-          animation: floatCrit 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          animation: floatCrit 0.85s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
         }
         @keyframes floatSoft {
           0% {
