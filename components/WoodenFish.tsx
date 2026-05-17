@@ -11,95 +11,6 @@ type Props = {
   onTap: (e: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
-function WoodenFishArt({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 200 168"
-      className={className}
-      aria-hidden
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <linearGradient id="woodBody" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#e8b878" />
-          <stop offset="45%" stopColor="#c8874a" />
-          <stop offset="100%" stopColor="#8f5a2e" />
-        </linearGradient>
-        <linearGradient id="woodHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#fff2d6" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#fff2d6" stopOpacity="0" />
-        </linearGradient>
-        <radialGradient id="woodShadow" cx="50%" cy="70%" r="55%">
-          <stop offset="0%" stopColor="#5c3a1e" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#5c3a1e" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      {/* 木鱼侧身：圆腹、鱼尾、鱼鳍 */}
-      <ellipse cx="98" cy="88" rx="72" ry="58" fill="url(#woodBody)" />
-      <ellipse cx="98" cy="88" rx="72" ry="58" fill="url(#woodShadow)" />
-      <ellipse
-        cx="88"
-        cy="72"
-        rx="48"
-        ry="36"
-        fill="url(#woodHighlight)"
-      />
-      {/* 鱼尾 */}
-      <path
-        d="M158 78 Q188 68 194 88 Q188 108 158 98 Q168 88 158 78Z"
-        fill="#a66b38"
-      />
-      <path
-        d="M162 82 Q182 76 186 88 Q182 100 162 94Z"
-        fill="#c8874a"
-      />
-      {/* 背鳍 */}
-      <path
-        d="M72 42 Q98 28 118 38 L112 48 Q96 40 78 50Z"
-        fill="#b87440"
-      />
-      {/* 腹鳍 */}
-      <path
-        d="M58 108 Q78 118 96 112 L92 104 Q76 110 62 102Z"
-        fill="#9a6032"
-      />
-      {/* 木鱼开口（中空缝） */}
-      <path
-        d="M38 72 Q52 58 78 62 Q98 66 108 78 Q98 108 72 112 Q48 110 38 92 Q34 82 38 72Z"
-        fill="#4a2f18"
-      />
-      <path
-        d="M42 76 Q54 66 76 70 Q94 74 102 82 Q92 100 70 102 Q52 100 42 88 Q40 82 42 76Z"
-        fill="#2a1810"
-        opacity="0.85"
-      />
-      {/* 木纹理 */}
-      <path
-        d="M52 52 Q88 44 120 56"
-        fill="none"
-        stroke="#7a4e28"
-        strokeWidth="1.2"
-        opacity="0.35"
-      />
-      <path
-        d="M48 100 Q90 108 128 96"
-        fill="none"
-        stroke="#6b4224"
-        strokeWidth="1"
-        opacity="0.3"
-      />
-      <ellipse
-        cx="128"
-        cy="86"
-        rx="6"
-        ry="8"
-        fill="#d4a064"
-        opacity="0.5"
-      />
-    </svg>
-  );
-}
-
 export function WoodenFish({
   disabled,
   burst,
@@ -108,6 +19,15 @@ export function WoodenFish({
   reduceMotion,
   onTap,
 }: Props) {
+  const motionClass = [
+    "fish-motion",
+    !reduceMotion && burst === "normal" ? "fish-motion--hit" : "",
+    !reduceMotion && burst === "crit" ? "fish-motion--crit" : "",
+    !reduceMotion && tapPulse > 0 ? "fish-motion--tap" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <button
       type="button"
@@ -115,68 +35,225 @@ export function WoodenFish({
       onClick={onTap}
       aria-label="敲木鱼祈福"
       className={[
-        "wooden-fish-btn group relative flex h-56 w-64 select-none flex-col items-center justify-center border-0 bg-transparent p-2 transition-transform duration-75 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb7d5] focus-visible:ring-offset-2",
-        disabled
-          ? "cursor-not-allowed opacity-50"
-          : "cursor-pointer hover:scale-[1.02] active:scale-[0.92]",
-        burst === "normal" && !reduceMotion ? "fish-hit-normal" : "",
-        burst === "crit" && !reduceMotion ? "fish-hit-crit" : "",
-        tapPulse > 0 && !reduceMotion ? "fish-tap-pulse" : "",
+        "wooden-fish-btn group relative flex h-56 w-72 items-center justify-center border-0 bg-transparent p-0",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb7d5] focus-visible:ring-offset-4",
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
       ].join(" ")}
     >
-      <span className="relative flex h-full w-full items-center justify-center">
+      <span className="fish-stage relative flex h-48 w-full max-w-[280px] items-center justify-center">
         <TapRippleLayer ripples={ripples} />
-        <WoodenFishArt className="relative z-10 h-44 w-auto max-w-full drop-shadow-[0_14px_28px_rgba(120,72,40,0.35)] transition-transform duration-75 group-active:scale-95" />
+
+        {/* 柔光底座 */}
+        <span
+          className="fish-pedestal pointer-events-none absolute bottom-2 left-1/2 h-8 w-40 -translate-x-1/2 rounded-[100%] bg-[#ffb7d5]/25 blur-xl"
+          aria-hidden
+        />
+
+        <span
+          key={reduceMotion ? "static" : tapPulse}
+          className={motionClass}
+          aria-hidden
+        >
+          <span className="fish-shape">
+            {/* 鱼尾 */}
+            <span className="fish-tail" />
+            {/* 鱼身主体 */}
+            <span className="fish-body">
+              <span className="fish-body-inner" />
+              <span className="fish-shine" />
+              <span className="fish-mouth" />
+            </span>
+          </span>
+        </span>
+
         {burst === "crit" && !reduceMotion && (
-          <span className="pointer-events-none absolute inset-4 z-20 rounded-[3rem] ring-4 ring-[#ff9ec4]/50 ring-offset-2 ring-offset-transparent" />
+          <span className="fish-crit-ring pointer-events-none absolute inset-6 rounded-[2.5rem]" />
         )}
       </span>
 
       <style jsx global>{`
-        @keyframes fishHitNormal {
+        .fish-stage {
+          perspective: 640px;
+        }
+
+        .fish-motion {
+          display: block;
+          transform: translateZ(0);
+          transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+          will-change: transform;
+        }
+
+        .wooden-fish-btn:not(:disabled):hover .fish-motion {
+          transform: translateY(-3px) scale(1.03);
+        }
+
+        .fish-shape {
+          position: relative;
+          display: block;
+          width: 168px;
+          height: 118px;
+        }
+
+        .fish-body {
+          position: absolute;
+          left: 8px;
+          top: 14px;
+          width: 132px;
+          height: 92px;
+          border-radius: 58% 62% 55% 48% / 52% 54% 46% 48%;
+          background: linear-gradient(
+            145deg,
+            #f3d4a8 0%,
+            #e2b67a 38%,
+            #c99558 72%,
+            #b8844f 100%
+          );
+          box-shadow:
+            inset 0 10px 18px rgba(255, 248, 235, 0.65),
+            inset 0 -14px 22px rgba(140, 88, 48, 0.22),
+            0 18px 36px rgba(180, 120, 80, 0.28),
+            0 4px 10px rgba(199, 91, 140, 0.12);
+        }
+
+        .fish-body-inner {
+          position: absolute;
+          inset: 10px 14px 12px 18px;
+          border-radius: inherit;
+          background: linear-gradient(
+            160deg,
+            rgba(255, 240, 220, 0.35) 0%,
+            rgba(255, 255, 255, 0) 55%
+          );
+        }
+
+        .fish-shine {
+          position: absolute;
+          left: 22px;
+          top: 16px;
+          width: 44px;
+          height: 28px;
+          border-radius: 50%;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(255, 252, 245, 0.9) 0%,
+            rgba(255, 252, 245, 0) 70%
+          );
+          opacity: 0.85;
+        }
+
+        .fish-mouth {
+          position: absolute;
+          left: 6px;
+          top: 28px;
+          width: 36px;
+          height: 44px;
+          border-radius: 52% 48% 50% 50%;
+          background: linear-gradient(
+            135deg,
+            #9a6b42 0%,
+            #7a5234 55%,
+            #6b462c 100%
+          );
+          box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+          opacity: 0.88;
+        }
+
+        .fish-tail {
+          position: absolute;
+          right: 0;
+          top: 36px;
+          width: 44px;
+          height: 52px;
+          border-radius: 0 70% 65% 0;
+          background: linear-gradient(160deg, #ddb078 0%, #c99558 100%);
+          box-shadow:
+            inset -4px 0 8px rgba(255, 235, 210, 0.35),
+            4px 8px 14px rgba(140, 88, 48, 0.18);
+          transform: rotate(-6deg);
+        }
+
+        .fish-crit-ring {
+          animation: fishCritRing 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          box-shadow: 0 0 0 0 rgba(255, 158, 196, 0.55);
+        }
+
+        @keyframes fishTapSmooth {
           0% {
-            transform: scale(1);
+            transform: translateY(0) scale(1);
           }
-          35% {
-            transform: scale(0.94) translateY(2px);
+          22% {
+            transform: translateY(5px) scale(0.94);
+          }
+          55% {
+            transform: translateY(-2px) scale(1.02);
           }
           100% {
-            transform: scale(1);
+            transform: translateY(0) scale(1);
           }
         }
-        @keyframes fishHitCrit {
+
+        @keyframes fishHitSmooth {
           0% {
-            transform: scale(1) rotate(0deg);
+            transform: translateY(0) scale(1);
           }
-          25% {
-            transform: scale(0.92) rotate(-3deg);
+          30% {
+            transform: translateY(6px) scale(0.93);
           }
-          50% {
-            transform: scale(1.04) rotate(3deg);
+          65% {
+            transform: translateY(-3px) scale(1.03);
           }
           100% {
-            transform: scale(1) rotate(0deg);
+            transform: translateY(0) scale(1);
           }
         }
-        @keyframes fishTapPulse {
+
+        @keyframes fishCritSmooth {
           0% {
-            filter: brightness(1);
+            transform: translateY(0) scale(1) rotate(0deg);
           }
-          50% {
-            filter: brightness(1.08);
+          20% {
+            transform: translateY(5px) scale(0.9) rotate(-2deg);
+          }
+          45% {
+            transform: translateY(-4px) scale(1.05) rotate(2deg);
+          }
+          70% {
+            transform: translateY(1px) scale(0.98) rotate(-1deg);
           }
           100% {
-            filter: brightness(1);
+            transform: translateY(0) scale(1) rotate(0deg);
           }
         }
-        .fish-hit-normal {
-          animation: fishHitNormal 0.26s ease-out;
+
+        @keyframes fishCritRing {
+          0% {
+            box-shadow: 0 0 0 0 rgba(255, 158, 196, 0.65);
+          }
+          100% {
+            box-shadow: 0 0 0 18px rgba(255, 158, 196, 0);
+          }
         }
-        .fish-hit-crit {
-          animation: fishHitCrit 0.4s ease-out;
+
+        .fish-motion--tap {
+          animation: fishTapSmooth 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
-        .wooden-fish-btn.fish-tap-pulse {
-          animation: fishTapPulse 0.12s ease-out;
+
+        .fish-motion--hit {
+          animation: fishHitSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .fish-motion--crit {
+          animation: fishCritSmooth 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .fish-motion,
+          .fish-motion--tap,
+          .fish-motion--hit,
+          .fish-motion--crit {
+            animation: none !important;
+            transition: none !important;
+          }
         }
       `}</style>
     </button>

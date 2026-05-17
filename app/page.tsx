@@ -242,13 +242,10 @@ export default function HomePage() {
           "crit",
           data.critCount >= n ? "心念暴击！" : `暴击 ×${data.critCount}`,
         );
+        setTimeout(() => setTapBurst(null), reduceMotion ? 200 : 580);
       } else if (n > 1) {
-        setTapBurst("normal");
         pushFloat("normal", `+${n}`);
-      } else {
-        setTapBurst("normal");
       }
-      setTimeout(() => setTapBurst(null), reduceMotion ? 200 : 420);
       void refreshPublic(id);
     } catch {
       pending.current += n;

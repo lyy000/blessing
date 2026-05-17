@@ -22,16 +22,16 @@ export function TapRippleLayer({ ripples }: { ripples: TapRipple[] }) {
       <style jsx global>{`
         @keyframes tapRippleExpand {
           0% {
-            opacity: 0.85;
-            transform: scale(0.4);
+            opacity: 0.7;
+            transform: scale(0.5);
           }
           100% {
             opacity: 0;
-            transform: scale(4.5);
+            transform: scale(3.8);
           }
         }
         .tap-ripple {
-          animation: tapRippleExpand 0.55s ease-out forwards;
+          animation: tapRippleExpand 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
       `}</style>
     </div>
