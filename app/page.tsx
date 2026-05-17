@@ -284,7 +284,7 @@ export default function HomePage() {
     addRipple(e);
     setTapPulse((p) => p + 1);
     playWoodenFishKnock("normal");
-    pushFloat("normal", "咚 +1");
+    pushFloat("normal", "+1");
     pending.current = Math.min(pending.current + 1, 25);
     scheduleFlush();
   };
@@ -395,7 +395,8 @@ export default function HomePage() {
             />
             <BlessingFloatLayer items={floating} reduceMotion={reduceMotion} />
             <p className="mt-6 max-w-sm text-center text-sm text-[color:var(--color-text-muted)]">
-              每敲一次都有音效与飘字反馈；连点可攒祝福。累计每满 100 次会暂停并弹出随机祝福语。
+              轻敲木鱼，心念会叠成暖意，送给曼桢。愿她少咳几声、多喝温水，感冒快快散去。
+              心念积满百次，会有一封随机祝福轻轻展开。
             </p>
           </div>
 
