@@ -10,7 +10,7 @@ export type PenalizedUser = {
 
 export type PenalizedAnnouncement = {
   updatedAt: string;
-  threshold: number;
+  note?: string;
   users: PenalizedUser[];
 };
 

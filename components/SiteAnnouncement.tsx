@@ -36,10 +36,10 @@ export function SiteAnnouncement() {
       </p>
       <div className="mt-3 space-y-3 text-sm leading-relaxed text-[color:var(--color-text)]">
         <p>
-          我们发现部分用户使用了<strong>连点器</strong>等工具异常刷取祈福数据，这与本页「为曼桢送一份真心祝福」的初衷不符。
+          本次核查发现，有用户使用<strong>连点器</strong>等工具异常刷取祈福数据，这与本页「为曼桢送一份真心祝福」的初衷不符。
         </p>
         <p>
-          经查，以下账号的累计祈福已调整为<strong>负数</strong>（不再计入正常排行）：
+          经站主<strong>一次性</strong>处理，以下账号的累计祈福已调整为<strong>负数</strong>（不再计入正常排行；今后若再出现类似情况将另行处理）：
         </p>
         <ul className="space-y-2 rounded-2xl bg-white/70 px-4 py-3 text-[13px]">
           {data.users.map((u) => (
