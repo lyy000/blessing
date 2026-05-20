@@ -8,7 +8,8 @@
     "start": "next start",
     "start:server": "node .next/standalone/server.js",
     "lint": "eslint",
-    "db:reset": "node scripts/reset-db.mjs"
+    "db:reset": "node scripts/reset-db.mjs",
+    "db:penalize": "node scripts/penalize-abusers.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

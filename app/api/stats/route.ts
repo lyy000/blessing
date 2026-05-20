@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const db = await getDb();
   const sum = await db.execute({
-    sql: `SELECT COALESCE(SUM(total_bless), 0) AS g FROM visitors`,
+    sql: `SELECT COALESCE(SUM(CASE WHEN total_bless > 0 THEN total_bless ELSE 0 END), 0) AS g FROM visitors`,
   });
   const globalTotal = Number(sum.rows[0]?.g ?? 0);
   const visitorCount = await db.execute({

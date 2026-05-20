@@ -4,6 +4,7 @@ import { BlessingFloatLayer } from "@/components/BlessingEffects";
 import { HealthMessage, type StatsPayload } from "@/components/HealthMessage";
 import { Leaderboard, type LeaderRow } from "@/components/Leaderboard";
 import { MilestoneBlessModal } from "@/components/MilestoneBlessModal";
+import { SiteAnnouncement } from "@/components/SiteAnnouncement";
 import { WoodenFish } from "@/components/WoodenFish";
 import {
   MILESTONE_EVERY,
@@ -334,6 +335,8 @@ export default function HomePage() {
           轻轻敲一敲木鱼，为曼桢送一句祝福：少咳几声、多喝温水、早点康复。
         </p>
       </header>
+
+      <SiteAnnouncement />
 
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="flex flex-col gap-6">

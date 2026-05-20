@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const db = await getDb();
   const res = await db.execute({
-    sql: `SELECT id, display_name, total_bless, crit_bless FROM visitors ORDER BY total_bless DESC, updated_at ASC LIMIT ?`,
+    sql: `SELECT id, display_name, total_bless, crit_bless FROM visitors WHERE total_bless > 0 ORDER BY total_bless DESC, updated_at ASC LIMIT ?`,
     args: [limit],
   });
 
